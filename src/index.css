@@ -226,17 +226,21 @@ body {
 }
 
 .metric strong {
+  display: block;
   font-size: 2.1rem;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.04em;
-  margin-top: 8px;
+  margin-top: 6px;
+  line-height: 1.1;
 }
 
 .metric small {
+  display: block;
   font-size: 0.72rem;
   color: var(--text-muted);
   margin-top: 4px;
+  line-height: 1.35;
 }
 
 /* Modern Compact Segmented Selector (Replacing Card buttons) */
@@ -1125,13 +1129,18 @@ tbody tr:hover {
   font-weight: 700;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
   box-shadow: none !important;
   display: inline-flex;
   align-items: center;
+  margin-left: 10px;
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+  border-radius: 0;
+  transition: color 0.15s ease;
 }
 
 .btn-logout:hover {
-  background: var(--danger-light);
+  background: none;
+  color: #b91c1c;
 }
 
