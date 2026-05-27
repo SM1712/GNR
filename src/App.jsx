@@ -198,13 +198,13 @@ export default function App() {
           </div>
           <div className="user-profile-badge">
             {user.photoURL ? (
-              <img src={user.photoURL} alt={user.displayName} className="user-avatar" />
+              <img src={user.photoURL} alt={user.displayName || "Usuario"} className="user-avatar" />
             ) : (
-              <div className="user-avatar-placeholder">{user.displayName?.slice(0, 2).toUpperCase()}</div>
+              <div className="user-avatar-placeholder">{(user.displayName || user.email || "US").slice(0, 2).toUpperCase()}</div>
             )}
             <div className="user-info">
               <span>Sesión activa</span>
-              <strong>{user.displayName || "Usuario"}</strong>
+              <strong>{user.displayName || user.email || "Usuario"}</strong>
             </div>
             <button type="button" className="btn-logout" onClick={() => logoutUser()}>
               Salir
