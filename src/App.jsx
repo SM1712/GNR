@@ -2,37 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { getAllRecords, addRecord, deleteRecord, clearAllRecords, bulkAddRecords } from './db/indexedDB';
 import { INITIAL_RECORDS } from './db/initialRecords';
 import { normalizeRecord } from './utils/excelPdfUtils';
+import { 
+  auth, 
+  logoutUser, 
+  getCloudRecords, 
+  addCloudRecord, 
+  deleteCloudRecord, 
+  syncIndexedDBWithCloud, 
+  ALLOWED_EMAILS 
+} from './db/firebase';
 import Dashboard from './components/Dashboard';
 import Registro from './components/Registro';
 import Historial from './components/Historial';
 import Reportes from './components/Reportes';
 import Respaldo from './components/Respaldo';
+import Login from './components/Login';
+import AccessDenied from './components/AccessDenied';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [records, setRecords] = useState([]);
+  
+  // Firebase Auth states
+  const [user, setUser] = useState(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  // Fetch records from IndexedDB on startup
+  // Monitor Auth state change
   useEffect(() => {
-    getAllRecords()
-      .then(fetchedRecords => {
-        if (fetchedRecords.length === 0) {
-          // If database is empty, load INITIAL_RECORDS normalized as default
-          const normalized = INITIAL_RECORDS.map(normalizeRecord);
-          return bulkAddRecords(normalized).then(() => {
-            return getAllRecords();
-          });
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      if (currentUser) {
+        const authorized = ALLOWED_EMAILS.includes(currentUser.email?.toLowerCase());
+        setUser(currentUser);
+        setIsAuthorized(authorized);
+        if (authorized) {
+          // Perform cloud-to-local bidirectional sync on login
+          await syncIndexedDBWithCloud(currentUser.uid);
+          // Load final synced records from local IndexedDB
+          const localRecords = await getAllRecords();
+          setRecords(localRecords.map(normalizeRecord));
         }
-        // Normalize loaded records to guarantee presence of campo, plan, and correct data types
-        return fetchedRecords.map(normalizeRecord);
-      })
-      .then(finalRecords => {
-        setRecords(finalRecords || []);
-      })
-      .catch(err => {
-        console.error("Failed to load records from IndexedDB:", err);
-        setRecords(INITIAL_RECORDS.map(normalizeRecord));
-      });
+      } else {
+        setUser(null);
+        setIsAuthorized(false);
+        setRecords([]);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleAddRecord = (record) => {
@@ -40,6 +57,12 @@ export default function App() {
     addRecord(normalized)
       .then(() => {
         setRecords(prev => [...prev, normalized]);
+        // Replicate to Cloud Firestore
+        if (user && isAuthorized) {
+          addCloudRecord(user.uid, normalized).catch(err => {
+            console.error("Cloud replicate failed:", err);
+          });
+        }
       })
       .catch(err => {
         alert("Error al guardar el registro: " + err);
@@ -50,6 +73,12 @@ export default function App() {
     deleteRecord(id)
       .then(() => {
         setRecords(prev => prev.filter(r => r.id !== id));
+        // Delete from Cloud Firestore
+        if (user && isAuthorized) {
+          deleteCloudRecord(id).catch(err => {
+            console.error("Cloud delete failed:", err);
+          });
+        }
       })
       .catch(err => {
         alert("Error al eliminar el registro: " + err);
@@ -65,8 +94,15 @@ export default function App() {
       .then(() => {
         return getAllRecords();
       })
-      .then(allRecords => {
-        setRecords(allRecords.map(normalizeRecord));
+      .then(async (allRecords) => {
+        const normalizedList = allRecords.map(normalizeRecord);
+        setRecords(normalizedList);
+        // Bulk sync to Cloud Firestore
+        if (user && isAuthorized) {
+          for (const rec of normalizedList) {
+            await addCloudRecord(user.uid, rec);
+          }
+        }
       })
       .catch(err => {
         alert("Error al importar la copia de seguridad: " + err);
@@ -82,8 +118,15 @@ export default function App() {
       .then(() => {
         return getAllRecords();
       })
-      .then(allRecords => {
-        setRecords(allRecords.map(normalizeRecord));
+      .then(async (allRecords) => {
+        const normalizedList = allRecords.map(normalizeRecord);
+        setRecords(normalizedList);
+        // Bulk sync to Cloud Firestore
+        if (user && isAuthorized) {
+          for (const rec of normalizedList) {
+            await addCloudRecord(user.uid, rec);
+          }
+        }
       })
       .catch(err => {
         alert("Error al restaurar los datos iniciales: " + err);
@@ -92,8 +135,15 @@ export default function App() {
 
   const handleWipeData = () => {
     clearAllRecords()
-      .then(() => {
+      .then(async () => {
         setRecords([]);
+        // Sync wipe in Cloud Firestore
+        if (user && isAuthorized) {
+          const cloudRecords = await getCloudRecords(user.uid);
+          for (const rec of cloudRecords) {
+            await deleteCloudRecord(rec.id);
+          }
+        }
       })
       .catch(err => {
         alert("Error al vaciar los datos: " + err);
@@ -103,6 +153,34 @@ export default function App() {
   const totalLevantadas = records
     .filter(r => r.tipo === "Levantadas")
     .reduce((sum, r) => sum + Number(r.cantidad || 0), 0);
+
+  if (authLoading) {
+    return (
+      <div className="login-container">
+        <span className="spinner" style={{ width: '40px', height: '40px', borderWidth: '3px' }}></span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Login 
+        onAuthSuccess={() => {}} 
+      />
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <AccessDenied 
+        user={user} 
+        onLogoutSuccess={() => {
+          setUser(null);
+          setIsAuthorized(false);
+        }} 
+      />
+    );
+  }
 
   return (
     <div className="app">
@@ -117,6 +195,20 @@ export default function App() {
           <div className="meta-badge">
             <span>Levantadas</span>
             <strong>{totalLevantadas} acumuladas</strong>
+          </div>
+          <div className="user-profile-badge">
+            {user.photoURL ? (
+              <img src={user.photoURL} alt={user.displayName} className="user-avatar" />
+            ) : (
+              <div className="user-avatar-placeholder">{user.displayName?.slice(0, 2).toUpperCase()}</div>
+            )}
+            <div className="user-info">
+              <span>Sesión activa</span>
+              <strong>{user.displayName || "Usuario"}</strong>
+            </div>
+            <button type="button" className="btn-logout" onClick={() => logoutUser()}>
+              Salir
+            </button>
           </div>
         </div>
       </header>
