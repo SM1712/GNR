@@ -97,15 +97,24 @@ export default function App() {
       .then(async (allRecords) => {
         const normalizedList = allRecords.map(normalizeRecord);
         setRecords(normalizedList);
-        // Bulk sync to Cloud Firestore
+        
+        // Bulk sync to Cloud Firestore in local-first, cloud-second pattern
         if (user && isAuthorized) {
-          for (const rec of normalizedList) {
-            await addCloudRecord(user.uid, rec);
+          try {
+            for (const rec of normalizedList) {
+              await addCloudRecord(user.uid, rec);
+            }
+            alert("Copia de seguridad importada y respaldada en la nube con éxito.");
+          } catch (cloudErr) {
+            console.error("Cloud backup sync failed:", cloudErr);
+            alert("Datos importados localmente con éxito. (La copia en la nube falló por permisos de base de datos, revisa tus reglas).");
           }
+        } else {
+          alert("Copia de seguridad importada localmente con éxito.");
         }
       })
       .catch(err => {
-        alert("Error al importar la copia de seguridad: " + err);
+        alert("Error al importar la copia de seguridad local: " + err);
       });
   };
 
@@ -121,15 +130,24 @@ export default function App() {
       .then(async (allRecords) => {
         const normalizedList = allRecords.map(normalizeRecord);
         setRecords(normalizedList);
-        // Bulk sync to Cloud Firestore
+        
+        // Bulk sync to Cloud Firestore in local-first, cloud-second pattern
         if (user && isAuthorized) {
-          for (const rec of normalizedList) {
-            await addCloudRecord(user.uid, rec);
+          try {
+            for (const rec of normalizedList) {
+              await addCloudRecord(user.uid, rec);
+            }
+            alert("Registros de muestra restablecidos y respaldados en la nube.");
+          } catch (cloudErr) {
+            console.error("Cloud demo restore failed:", cloudErr);
+            alert("Registros de muestra restablecidos localmente con éxito.");
           }
+        } else {
+          alert("Registros de muestra restablecidos localmente con éxito.");
         }
       })
       .catch(err => {
-        alert("Error al restaurar los datos iniciales: " + err);
+        alert("Error al restaurar los datos iniciales locales: " + err);
       });
   };
 
@@ -137,16 +155,25 @@ export default function App() {
     clearAllRecords()
       .then(async () => {
         setRecords([]);
+        
         // Sync wipe in Cloud Firestore
         if (user && isAuthorized) {
-          const cloudRecords = await getCloudRecords(user.uid);
-          for (const rec of cloudRecords) {
-            await deleteCloudRecord(rec.id);
+          try {
+            const cloudRecords = await getCloudRecords(user.uid);
+            for (const rec of cloudRecords) {
+              await deleteCloudRecord(rec.id);
+            }
+            alert("Base de datos local y de la nube vaciada con éxito.");
+          } catch (cloudErr) {
+            console.error("Cloud wipe failed:", cloudErr);
+            alert("Base de datos local vaciada con éxito.");
           }
+        } else {
+          alert("Base de datos local vaciada con éxito.");
         }
       })
       .catch(err => {
-        alert("Error al vaciar los datos: " + err);
+        alert("Error al vaciar los datos locales: " + err);
       });
   };
 
