@@ -34,6 +34,7 @@ const googleProvider = new GoogleAuthProvider();
 
 // Whitelist of authorized Gmail accounts
 export const ALLOWED_EMAILS = [
+  "mesones536@gmail.com",
   "meson.sf@gmail.com",
   "sebastianmesonesu@gmail.com",
   "s.mesonesu@gmail.com",
