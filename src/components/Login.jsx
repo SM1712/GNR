@@ -25,8 +25,29 @@ export default function Login({ onAuthSuccess }) {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-logo-circle">
-            <span>GRF</span>
+          <div className="login-logo-circle" style={{ background: 'none', boxShadow: 'none', width: '72px', height: '72px' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" style={{ width: '100%', height: '100%' }}>
+              <defs>
+                <linearGradient id="logoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#4f46e5" />
+                  <stop offset="100%" stopColor="#818cf8" />
+                </linearGradient>
+                <linearGradient id="glow1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+                <linearGradient id="glow2" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#14b8a6" />
+                </linearGradient>
+              </defs>
+              <rect width="128" height="128" rx="36" fill="url(#logoBgGrad)" />
+              <g transform="translate(16, 16)">
+                <path d="M24,48 C24,32 36,20 52,20 C68,20 80,32 80,48 C80,64 68,76 52,76 L24,76" fill="none" stroke="url(#glow2)" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+                <path d="M72,48 C72,64 60,76 44,76 C28,76 16,64 16,48 C16,32 28,20 44,20 L72,20" fill="none" stroke="url(#glow1)" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="44" cy="48" r="8" fill="#ffffff" />
+              </g>
+            </svg>
           </div>
           <h1>GRF Portal</h1>
           <p className="login-subtitle">
