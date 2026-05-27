@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FOSMAR Control Diario Pro</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #eef3f9;
+      --surface: rgba(255,255,255,.82);
+      --surface-strong: #ffffff;
+      --text: #122033;
+      --muted: #64748b;
+      --line: #d9e3ee;
+      --navy: #0d2342;
+      --navy-2: #17375e;
+      --blue: #2563eb;
+      --cyan: #0891b2;
+      --green: #16a34a;
+      --orange: #f97316;
+      --red: #dc2626;
+      --purple: #7c3aed;
+      --shadow: 0 22px 55px rgba(15, 23, 42, .10);
+      --soft-shadow: 0 12px 30px rgba(15, 23, 42, .08);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:
+        radial-gradient(circle at 4% 4%, rgba(37, 99, 235, .18), transparent 31%),
+        radial-gradient(circle at 92% 8%, rgba(124, 58, 237, .14), transparent 34%),
+        linear-gradient(180deg, #f8fbff, var(--bg));
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.4fr .9fr;
+      gap: 18px;
+      padding: 26px;
+      border-radius: 32px;
+      color: #fff;
+      background:
+        linear-gradient(135deg, rgba(13,35,66,.98), rgba(29,78,216,.95) 56%, rgba(124,58,237,.95)),
+        radial-gradient(circle at 92% 18%, rgba(255,255,255,.22), transparent 20%);
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.75rem, 3.2vw, 3rem);
+      letter-spacing: -.045em;
+      line-height: 1;
+    }
+
+    .hero p {
+      max-width: 720px;
+      color: rgba(255,255,255,.82);
+      line-height: 1.55;
+      margin: 12px 0 0;
+    }
+
+    .hero-mini {
+      display: grid;
+      gap: 10px;
+      align-content: center;
+      z-index: 1;
+    }
+
+    .mini-card {
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 20px;
+      padding: 14px;
+      background: rgba(255,255,255,.12);
+      backdrop-filter: blur(12px);
+    }
+
+    .mini-card span {
+      display: block;
+      color: rgba(255,255,255,.7);
+      font-size: .8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .mini-card strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.35rem;
+    }
+
+    .tabs {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 14px 0;
+      margin: 4px 0 10px;
+      background: linear-gradient(180deg, rgba(238,243,249,.98), rgba(238,243,249,.78));
+      backdrop-filter: blur(12px);
+    }
+
+    .tab {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.78);
+      color: var(--navy);
+      padding: 11px 15px;
+      border-radius: 999px;
+      font-weight: 850;
+      cursor: pointer;
+      transition: .16s ease;
+    }
+
+    .tab:hover { transform: translateY(-1px); }
+    .tab.active {
+      background: var(--navy);
+      color: #fff;
+      border-color: var(--navy);
+      box-shadow: 0 12px 24px rgba(13,35,66,.18);
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .metrics {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .two {
+      grid-template-columns: 420px 1fr;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(217,227,238,.9);
+      border-radius: var(--radius);
+      box-shadow: var(--soft-shadow);
+      padding: 18px;
+      backdrop-filter: blur(14px);
+    }
+
+    .card h2 {
+      margin: 0 0 4px;
+      font-size: 1.15rem;
+      letter-spacing: -.02em;
+    }
+
+    .sub {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: .91rem;
+      line-height: 1.45;
+    }
+
+    .metric {
+      min-height: 128px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .metric::after {
+      content: "";
+      position: absolute;
+      width: 86px;
+      height: 86px;
+      right: -28px;
+      top: -24px;
+      border-radius: 999px;
+      background: rgba(37,99,235,.1);
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: .81rem;
+      font-weight: 900;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 2.05rem;
+      letter-spacing: -.05em;
+      line-height: 1;
+      margin-top: 8px;
+    }
+
+    .metric small { color: var(--muted); }
+
+    .activity-switch {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+      margin: 14px 0 16px;
+    }
+
+    .activity-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 20px;
+      padding: 14px;
+      cursor: pointer;
+      transition: .16s ease;
+      min-height: 98px;
+    }
+
+    .activity-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .activity-card.active {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.10), var(--soft-shadow);
+    }
+
+    .activity-card b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: .98rem;
+    }
+
+    .activity-card span {
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.3;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: .8rem;
+      font-weight: 900;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 11px 12px;
+      background: #fff;
+      font: inherit;
+      color: var(--text);
+      outline: none;
+      transition: border .15s ease, box-shadow .15s ease;
+    }
+
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(37,99,235,.75);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+
+    .hint {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.35;
+    }
+
+    .notice {
+      border: 1px solid #c7d2fe;
+      color: #1e3a8a;
+      background: #eef2ff;
+      padding: 12px;
+      border-radius: 16px;
+      font-size: .88rem;
+      line-height: 1.45;
+      margin-top: 12px;
+    }
+
+    .notice.orange {
+      border-color: #fed7aa;
+      color: #7c2d12;
+      background: #fff7ed;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 11px 14px;
+      font-family: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(15,23,42,.12);
+    }
+
+    .btn-primary { background: var(--blue); color:#fff; }
+    .btn-dark { background: var(--navy); color:#fff; }
+    .btn-green { background: var(--green); color:#fff; }
+    .btn-orange { background: var(--orange); color:#fff; }
+    .btn-purple { background: var(--purple); color:#fff; }
+    .btn-red { background: var(--red); color:#fff; }
+    .btn-light { background: #edf2f7; color: var(--navy); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: .76rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .p-pol { background:#eaf1ff; color:#1d4ed8; }
+    .p-cor { background:#e9f9ef; color:#15803d; }
+    .p-lev { background:#fff1e7; color:#c2410c; }
+    .p-dig { background:#eef2ff; color:#5b21b6; }
+    .p-otr { background:#f1f5f9; color:#334155; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1.3fr .8fr .8fr .8fr;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 590px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 920px;
+      border-collapse: collapse;
+      font-size: .87rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      text-align: left;
+      background: #edf3fb;
+      color: #0f172a;
+      padding: 11px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 11px;
+      border-bottom: 1px solid #edf2f7;
+      vertical-align: top;
+    }
+
+    tbody tr:hover { background: #f8fbff; }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 9px;
+      margin: 10px 0 14px;
+    }
+
+    .check-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 14px;
+      font-size: .88rem;
+      font-weight: 750;
+    }
+
+    .check-item input { width: auto; }
+
+    .report-layout {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .preset-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 12px;
+    }
+
+    .preset {
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--navy);
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: .81rem;
+      font-weight: 900;
+    }
+
+    .small-table {
+      min-width: 560px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 14px;
+    }
+
+    .danger-zone {
+      background: #fff1f2;
+      border: 1px dashed rgba(220,38,38,.35);
+    }
+
+
+    .excel-preview-note {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: .86rem;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .planilla-head {
+      background: #0d2342 !important;
+      color: #fff !important;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    @media (max-width: 1120px) {
+      .hero, .two, .report-layout { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .activity-switch, .check-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .filters { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+
+    @media (max-width: 650px) {
+      .app { padding: 12px; }
+      .metrics, .activity-switch, .form-grid, .filters, .check-grid { grid-template-columns: 1fr; }
+      .hero { padding: 20px; }
+    }
+
+    @media print {
+      body { background: white; }
+      .tabs, .no-print, .actions, button, .hero p, .hero-mini { display: none !important; }
+      .section { display:block !important; }
+      .card { box-shadow:none; border:1px solid #cbd5e1; }
+      .table-wrap { max-height:none; overflow:visible; }
+      table { font-size: 8pt; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <div>
+        <h1>FOSMAR Control Diario Pro</h1>
+        <p>Registro diario más liviano: las pólizas, correos, digitalizados y levantamientos se manejan como actividades separadas, para que tus reportes no mezclen cosas irrelevantes.</p>
+      </div>
+      <div class="hero-mini">
+        <div class="mini-card"><span>Diseño</span><strong>Modular</strong></div>
+        <div class="mini-card"><span>Levantadas</span><strong>Acumulado</strong></div>
+      </div>
+    </header>
+
+    <nav class="tabs no-print">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="registro">Registro</button>
+      <button class="tab" data-tab="historial">Historial</button>
+      <button class="tab" data-tab="reportes">Reportes</button>
+      <button class="tab" data-tab="respaldo">Respaldo</button>
+    </nav>
+
+    <section id="dashboard" class="section active">
+      <div class="grid metrics">
+        <div class="card metric"><span class="label">Pólizas revisadas</span><div><strong id="mPolizas">0</strong><small>Aprobadas + observadas + revisadas</small></div></div>
+        <div class="card metric"><span class="label">Levantadas</span><div><strong id="mLev">0</strong><small>Bolsa acumulada, sin depender de fecha</small></div></div>
+        <div class="card metric"><span class="label">Digitalizadas</span><div><strong id="mDig">0</strong><small>Conteo independiente</small></div></div>
+        <div class="card metric"><span class="label">Correos</span><div><strong id="mCor">0</strong><small>Enviados/respondidos/pendientes</small></div></div>
+        <div class="card metric"><span class="label">Días con actividad</span><div><strong id="mDias">0</strong><small>Fechas únicas registradas</small></div></div>
+      </div>
+
+      <div class="grid two" style="margin-top:16px;">
+        <div class="card">
+          <h2>Resumen rápido</h2>
+          <p class="sub">El sistema ya no trata el correo como parte de las pólizas. Cada bloque vive separado.</p>
+          <div id="quickSummary"></div>
+        </div>
+        <div class="card">
+          <h2>Últimos movimientos</h2>
+          <p class="sub">Vista breve de lo más reciente.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Tipo</th><th>Campo</th><th>Cantidad</th><th>Detalle</th></tr></thead>
+              <tbody id="latestRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="registro" class="section">
+      <div class="card">
+        <h2>Registro intuitivo por actividad</h2>
+        <p class="sub">Primero elige qué estás registrando. Así el formulario se adapta y no te obliga a llenar campos que no corresponden.</p>
+
+        <div class="activity-switch no-print">
+          <div class="activity-card active" data-kind="Pólizas"><b>📄 Pólizas</b><span>Aprobadas, observadas o revisadas. Siempre por fecha.</span></div>
+          <div class="activity-card" data-kind="Levantadas"><b>🧾 Levantadas</b><span>Acumulado general. La fecha no pesa para el total.</span></div>
+          <div class="activity-card" data-kind="Digitalización"><b>🗂️ Digitalizadas</b><span>Digitalización de documentos o pólizas.</span></div>
+          <div class="activity-card" data-kind="Correos"><b>✉️ Correos</b><span>Enviados, respondidos o pendientes. Separado de pólizas.</span></div>
+        </div>
+
+        <div class="grid two">
+          <form id="entryForm" class="card" style="box-shadow:none;background:#fff;">
+            <h2 id="formTitle">Registrar pólizas</h2>
+            <p class="sub" id="formHelp">Registra cantidades del día por grupo y plan.</p>
+
+            <div class="form-grid">
+              <div id="dateBox">
+                <label for="fecha">Fecha</label>
+                <input type="date" id="fecha" />
+                <div class="hint" id="dateHint">La fecha sirve para reportes diarios y mensuales.</div>
+              </div>
+
+              <div>
+                <label for="cantidad">Cantidad</label>
+                <input type="number" id="cantidad" min="0" step="1" placeholder="Ej. 25" required />
+              </div>
+
+              <div>
+                <label for="campo">Campo / estado</label>
+                <select id="campo" required></select>
+              </div>
+
+              <div>
+                <label for="plan">Plan / canal</label>
+                <select id="plan">
+                  <option value="">No aplica</option>
+                  <option value="Plan Básico">Plan Básico</option>
+                  <option value="Onconaval">Onconaval</option>
+                  <option value="Correo institucional">Correo institucional</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Presencial">Presencial</option>
+                  <option value="Sistema interno">Sistema interno</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="grupo">Grupo / bloque</label>
+                <select id="grupo">
+                  <option value="">No aplica</option>
+                  <option value="Primer grupo">Primer grupo</option>
+                  <option value="Segundo grupo">Segundo grupo</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="responsable">Responsable</label>
+                <input type="text" id="responsable" placeholder="Ej. Sebastián" />
+              </div>
+
+              <div class="full">
+                <label for="observacion">Observaciones</label>
+                <textarea id="observacion" placeholder="Detalle opcional para contextualizar el registro."></textarea>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn-primary" type="submit">Guardar registro</button>
+              <button class="btn-light" type="button" id="clearForm">Limpiar</button>
+            </div>
+
+            <div class="notice orange" id="modeNotice">En pólizas, la fecha sí importa porque sirve para productividad diaria.</div>
+          </form>
+
+          <div class="card" style="box-shadow:none;background:#fff;">
+            <h2>Vista del día / acumulado</h2>
+            <p class="sub" id="sideHelp">Aquí verás el resumen de la fecha elegida.</p>
+            <div id="sideSummary" class="empty">Aún no hay registros para mostrar.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="historial" class="section">
+      <div class="card">
+        <h2>Historial</h2>
+        <p class="sub">Todos los registros quedan editables por eliminación y exportables.</p>
+        <div class="filters no-print">
+          <div><label>Buscar</label><input type="text" id="filterText" placeholder="Campo, plan, observación..." /></div>
+          <div><label>Tipo</label><select id="filterType"><option value="">Todos</option><option>Pólizas</option><option>Levantadas</option><option>Digitalización</option><option>Correos</option><option>Otros</option></select></div>
+          <div><label>Desde</label><input type="date" id="filterFrom" /></div>
+          <div><label>Hasta</label><input type="date" id="filterTo" /></div>
+        </div>
+        <div class="actions no-print">
+          <button class="btn-green" id="exportHistoryExcel">Exportar historial Excel</button>
+          <button class="btn-purple" id="exportHistoryPdf">Exportar historial PDF</button>
+          <button class="btn-light" id="clearFilters">Limpiar filtros</button>
+        </div>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Campo</th><th>Cantidad</th><th>Plan/canal</th><th>Grupo</th><th>Responsable</th><th>Obs.</th><th class="no-print">Acción</th></tr></thead>
+            <tbody id="historyRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="reportes" class="section">
+      <div class="report-layout">
+        <div class="card">
+          <h2>Constructor de reporte</h2>
+          <p class="sub">Escoge qué aparece. En “Formato Excel mensual” el reporte sale como la planilla anterior: días en filas, bloques por grupo/plan, total diario y observaciones.</p>
+
+          <label>Atajos</label>
+          <div class="preset-row">
+            <button class="preset" data-preset="todo">Todo</button>
+            <button class="preset" data-preset="polizas">Solo pólizas</button>
+            <button class="preset" data-preset="correos">Solo correos</button>
+            <button class="preset" data-preset="digitalizados">Digitalizados</button>
+            <button class="preset" data-preset="levantadas">Levantadas</button>
+            <button class="preset" data-preset="limpio">Limpiar</button>
+          </div>
+
+          <div class="form-grid">
+            <div><label>Desde</label><input type="date" id="reportFrom"></div>
+            <div><label>Hasta</label><input type="date" id="reportTo"></div>
+            <div><label>Modo</label><select id="reportMode"><option value="planilla" selected>Formato Excel mensual</option><option value="detalle">Detalle</option><option value="diario">Resumen diario</option><option value="mensual">Resumen mensual</option><option value="acumulado">Acumulado por campo</option></select><div class="hint">El formato Excel mensual imita la planilla anterior: días en filas, grupos por bloques y total diario.</div></div>
+            <div><label>Orden</label><select id="reportOrder"><option value="fecha">Fecha</option><option value="tipo">Tipo</option><option value="campo">Campo</option><option value="cantidad">Cantidad</option></select></div>
+          </div>
+
+          <h3>Contenido que aparecerá</h3>
+          <div id="fieldChecks" class="check-grid"></div>
+
+          <h3>Columnas visibles</h3>
+          <div id="columnChecks" class="check-grid"></div>
+
+          <div class="actions">
+            <button class="btn-green" id="exportReportExcel">Generar Excel</button>
+            <button class="btn-purple" id="exportReportPdf">Generar PDF cuadriculado</button>
+          </div>
+
+          <div class="notice">Para reportar correos sin ruido, usa “Solo correos”. Para reporte completo, usa “Todo”.</div>
+        </div>
+
+        <div class="card">
+          <h2>Vista previa</h2>
+          <p class="sub" id="reportCounter">Sin datos.</p>
+          <div class="table-wrap">
+            <table id="previewTable">
+              <thead id="reportHead"></thead>
+              <tbody id="reportRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="respaldo" class="section">
+      <div class="grid two">
+        <div class="card">
+          <h2>Respaldo</h2>
+          <p class="sub">Los datos se guardan en este navegador. Exporta JSON cada cierto tiempo para no perderlos.</p>
+          <div class="actions">
+            <button class="btn-orange" id="exportJson">Descargar respaldo JSON</button>
+            <label class="btn-light" style="display:inline-flex;align-items:center;cursor:pointer;">Importar JSON<input type="file" id="importJson" accept=".json" style="display:none"></label>
+            <button class="btn-dark" id="restoreInitial">Restaurar carga del Excel</button>
+          </div>
+        </div>
+
+        <div class="card danger-zone">
+          <h2>Zona delicada</h2>
+          <p class="sub">Borra todos los registros guardados en este navegador.</p>
+          <button class="btn-red" id="wipeData">Borrar todo</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "fosmar_control_diario_pro_v2";
+    const INITIAL_RECORDS = [
+  {
+    "id": "excel-0001",
+    "fecha": "2026-04-21",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 45,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 21 de abril se verifico la información de las polizas y se actualizaron los datos en fosmarcore, del plan basico",
+    "createdAt": "2026-04-21T09:01:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0002",
+    "fecha": "2026-04-21",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 6,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 21 de abril se verifico la información de las polizas y se actualizaron los datos en fosmarcore, del plan basico",
+    "createdAt": "2026-04-21T09:02:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0003",
+    "fecha": "2026-04-21",
+    "tipo": "Levantadas",
+    "categoria": "Observaciones levantadas",
+    "cantidad": 3,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 21 de abril se verifico la información de las polizas y se actualizaron los datos en fosmarcore, del plan basico",
+    "createdAt": "2026-04-21T09:03:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "acumulado",
+    "campoReporte": "Observaciones levantadas"
+  },
+  {
+    "id": "excel-0004",
+    "fecha": "2026-04-22",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 44,
+    "grupo": "Primer grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 22  de abril, se verifico la información escrita en los contratos del plan de salud complementario onconaval y se actualizaron los datos en fosmacore.",
+    "createdAt": "2026-04-22T09:04:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0005",
+    "fecha": "2026-04-22",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 11,
+    "grupo": "Primer grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 22  de abril, se verifico la información escrita en los contratos del plan de salud complementario onconaval y se actualizaron los datos en fosmacore.",
+    "createdAt": "2026-04-22T09:05:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0006",
+    "fecha": "2026-04-22",
+    "tipo": "Levantadas",
+    "categoria": "Observaciones levantadas",
+    "cantidad": 10,
+    "grupo": "Primer grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 22  de abril, se verifico la información escrita en los contratos del plan de salud complementario onconaval y se actualizaron los datos en fosmacore.",
+    "createdAt": "2026-04-22T09:06:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "acumulado",
+    "campoReporte": "Observaciones levantadas"
+  },
+  {
+    "id": "excel-0007",
+    "fecha": "2026-04-23",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 41,
+    "grupo": "Primer grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Días 23 de abril, se reemplazaron los reporte de todos los contratos ONCONAVAL salvo 2 haciendo en total 109 reportes actualizados, adicionalmente se realizo la actualización de datos en fosmarcore.",
+    "createdAt": "2026-04-23T09:07:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0008",
+    "fecha": "2026-04-23",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 15,
+    "grupo": "Primer grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Días 23 de abril, se reemplazaron los reporte de todos los contratos ONCONAVAL salvo 2 haciendo en total 109 reportes actualizados, adicionalmente se realizo la actualización de datos en fosmarcore.",
+    "createdAt": "2026-04-23T09:08:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0009",
+    "fecha": "2026-04-23",
+    "tipo": "Levantadas",
+    "categoria": "Observaciones levantadas",
+    "cantidad": 13,
+    "grupo": "Primer grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Días 23 de abril, se reemplazaron los reporte de todos los contratos ONCONAVAL salvo 2 haciendo en total 109 reportes actualizados, adicionalmente se realizo la actualización de datos en fosmarcore.",
+    "createdAt": "2026-04-23T09:09:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "acumulado",
+    "campoReporte": "Observaciones levantadas"
+  },
+  {
+    "id": "excel-0010",
+    "fecha": "2026-04-24",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 48,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 24 de abril, se realizo la subsancaión de los contratos observados los días 21, 22 y 23 así como la correción de los reportes que figuraban con Nro. De contrato 0, adicionalmente, se verifico la información de 48 contratos del plan de salud basico.",
+    "createdAt": "2026-04-24T09:10:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0011",
+    "fecha": "2026-04-24",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 5,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 24 de abril, se realizo la subsancaión de los contratos observados los días 21, 22 y 23 así como la correción de los reportes que figuraban con Nro. De contrato 0, adicionalmente, se verifico la información de 48 contratos del plan de salud basico.",
+    "createdAt": "2026-04-24T09:11:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0012",
+    "fecha": "2026-04-24",
+    "tipo": "Levantadas",
+    "categoria": "Observaciones levantadas",
+    "cantidad": 4,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 24 de abril, se realizo la subsancaión de los contratos observados los días 21, 22 y 23 así como la correción de los reportes que figuraban con Nro. De contrato 0, adicionalmente, se verifico la información de 48 contratos del plan de salud basico.",
+    "createdAt": "2026-04-24T09:12:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "acumulado",
+    "campoReporte": "Observaciones levantadas"
+  },
+  {
+    "id": "excel-0013",
+    "fecha": "2026-04-27",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 55,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 27 de abril, se realizo la verificación de los datos en los contratos del plan base y se actualizo la información en fosmarcore.",
+    "createdAt": "2026-04-27T09:13:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0014",
+    "fecha": "2026-04-27",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 6,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 27 de abril, se realizo la verificación de los datos en los contratos del plan base y se actualizo la información en fosmarcore.",
+    "createdAt": "2026-04-27T09:14:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0015",
+    "fecha": "2026-04-28",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 90,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 28 de abril, se verificaron los contratos del plan base y actualización de datos en fosmarcore ademas de reemplazar los reportes en 0 del día 24.",
+    "createdAt": "2026-04-28T09:15:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0016",
+    "fecha": "2026-04-28",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 9,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 28 de abril, se verificaron los contratos del plan base y actualización de datos en fosmarcore ademas de reemplazar los reportes en 0 del día 24.",
+    "createdAt": "2026-04-28T09:16:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0017",
+    "fecha": "2026-04-29",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 32,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "No se pudieron realizar laborales con reguralidad debido a corte de luz",
+    "createdAt": "2026-04-29T09:17:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0018",
+    "fecha": "2026-04-30",
+    "tipo": "Otros",
+    "categoria": "Incidencia / observación",
+    "cantidad": 0,
+    "grupo": "General",
+    "canal": "",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "No se pudieron realizar laborales debido a corte de internet",
+    "createdAt": "2026-04-30T11:18:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Incidencia / observación"
+  },
+  {
+    "id": "excel-0019",
+    "fecha": "2026-05-01",
+    "tipo": "Otros",
+    "categoria": "Incidencia / observación",
+    "cantidad": 0,
+    "grupo": "General",
+    "canal": "",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día del trabajador",
+    "createdAt": "2026-05-01T11:19:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Incidencia / observación"
+  },
+  {
+    "id": "excel-0020",
+    "fecha": "2026-05-04",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 71,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 4 de mayo, se realizo el levantamiento de reportes observados de los días 27 y 28 de mayo, así como la actualización de la información en fosmar core",
+    "createdAt": "2026-05-04T09:20:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0021",
+    "fecha": "2026-05-04",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 4,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 4 de mayo, se realizo el levantamiento de reportes observados de los días 27 y 28 de mayo, así como la actualización de la información en fosmar core",
+    "createdAt": "2026-05-04T09:21:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0022",
+    "fecha": "2026-05-05",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 76,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 5 de mayo, se verifico la información de las pólizas del plan de salud basico de primer y segundo grupo así como la actualización de datos en FOSMARCORE",
+    "createdAt": "2026-05-05T09:22:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0023",
+    "fecha": "2026-05-05",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 2,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 5 de mayo, se verifico la información de las pólizas del plan de salud basico de primer y segundo grupo así como la actualización de datos en FOSMARCORE",
+    "createdAt": "2026-05-05T09:23:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0024",
+    "fecha": "2026-05-05",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 20,
+    "grupo": "Segundo grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 5 de mayo, se verifico la información de las pólizas del plan de salud basico de primer y segundo grupo así como la actualización de datos en FOSMARCORE",
+    "createdAt": "2026-05-05T09:24:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0025",
+    "fecha": "2026-05-05",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 4,
+    "grupo": "Segundo grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 5 de mayo, se verifico la información de las pólizas del plan de salud basico de primer y segundo grupo así como la actualización de datos en FOSMARCORE",
+    "createdAt": "2026-05-05T09:25:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0026",
+    "fecha": "2026-05-06",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 52,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 6 de mayo se realizo la revisión de pólizas del plan de salud basico asi como la actualización de datos en FOSMARCORE y la digitalización de documentos.",
+    "createdAt": "2026-05-06T09:26:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0027",
+    "fecha": "2026-05-06",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 13,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 6 de mayo se realizo la revisión de pólizas del plan de salud basico asi como la actualización de datos en FOSMARCORE y la digitalización de documentos.",
+    "createdAt": "2026-05-06T09:27:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0028",
+    "fecha": "2026-05-06",
+    "tipo": "Digitalización",
+    "categoria": "Pólizas digitalizadas",
+    "cantidad": 17,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 6 de mayo se realizo la revisión de pólizas del plan de salud basico asi como la actualización de datos en FOSMARCORE y la digitalización de documentos.",
+    "createdAt": "2026-05-06T09:28:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas digitalizadas"
+  },
+  {
+    "id": "excel-0029",
+    "fecha": "2026-05-07",
+    "tipo": "Digitalización",
+    "categoria": "Pólizas digitalizadas",
+    "cantidad": 78,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Trasladado desde Excel - Mayo",
+    "createdAt": "2026-05-07T09:29:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas digitalizadas"
+  },
+  {
+    "id": "excel-0030",
+    "fecha": "2026-05-11",
+    "tipo": "Digitalización",
+    "categoria": "Pólizas digitalizadas",
+    "cantidad": 45,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 11 de mayo, se realizo la revisión de pólizas del Plan Básico de de Salud del segundo grupo así como su actualización de datos en la plataforma FOSMARCORE",
+    "createdAt": "2026-05-11T09:30:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas digitalizadas"
+  },
+  {
+    "id": "excel-0031",
+    "fecha": "2026-05-11",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 54,
+    "grupo": "Segundo grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 11 de mayo, se realizo la revisión de pólizas del Plan Básico de de Salud del segundo grupo así como su actualización de datos en la plataforma FOSMARCORE",
+    "createdAt": "2026-05-11T09:31:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0032",
+    "fecha": "2026-05-11",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas observadas",
+    "cantidad": 5,
+    "grupo": "Segundo grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Día 11 de mayo, se realizo la revisión de pólizas del Plan Básico de de Salud del segundo grupo así como su actualización de datos en la plataforma FOSMARCORE",
+    "createdAt": "2026-05-11T09:32:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas observadas"
+  },
+  {
+    "id": "excel-0033",
+    "fecha": "2026-05-12",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 15,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Trasladado desde Excel - Mayo",
+    "createdAt": "2026-05-12T09:33:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0034",
+    "fecha": "2026-05-12",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 31,
+    "grupo": "Segundo grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Trasladado desde Excel - Mayo",
+    "createdAt": "2026-05-12T09:34:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  },
+  {
+    "id": "excel-0035",
+    "fecha": "2026-05-13",
+    "tipo": "Digitalización",
+    "categoria": "Pólizas digitalizadas",
+    "cantidad": 54,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Trasladado desde Excel - Mayo",
+    "createdAt": "2026-05-13T09:35:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas digitalizadas"
+  },
+  {
+    "id": "excel-0036",
+    "fecha": "2026-05-13",
+    "tipo": "Digitalización",
+    "categoria": "Pólizas digitalizadas",
+    "cantidad": 54,
+    "grupo": "Primer grupo",
+    "canal": "Onconaval",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Trasladado desde Excel - Mayo",
+    "createdAt": "2026-05-13T09:36:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas digitalizadas"
+  },
+  {
+    "id": "excel-0037",
+    "fecha": "2026-05-14",
+    "tipo": "Pólizas",
+    "categoria": "Pólizas aprobadas",
+    "cantidad": 9,
+    "grupo": "Primer grupo",
+    "canal": "Plan Básico",
+    "responsable": "Sebastián Fernando Mesones Ugolini",
+    "observacion": "Se realizo el re-escaneo de los 140 documentos previamente digitalizados, adicionalmente se subasaron los planes observados del diás 4 y 5 de mayo, por ultimo se enviaron los documentos por correo a los afilaidos",
+    "createdAt": "2026-05-14T09:37:00.000Z",
+    "origen": "Excel trasladado",
+    "fechaModo": "diario",
+    "campoReporte": "Pólizas aprobadas"
+  }
+];
+
+    const REPORT_FIELDS = [
+      "Pólizas aprobadas",
+      "Pólizas observadas",
+      "Pólizas revisadas",
+      "Observaciones levantadas",
+      "Pólizas digitalizadas",
+      "Correos enviados",
+      "Correos respondidos",
+      "Correos pendientes",
+      "Correos de regularización",
+      "Atención presencial",
+      "Coordinación interna",
+      "Actualización de base",
+      "Otro"
+    ];
+
+    const COLUMNS = [
+      { key: "fecha", label: "Fecha" },
+      { key: "tipo", label: "Tipo" },
+      { key: "campo", label: "Campo" },
+      { key: "cantidad", label: "Cantidad" },
+      { key: "plan", label: "Plan/canal" },
+      { key: "grupo", label: "Grupo" },
+      { key: "responsable", label: "Responsable" },
+      { key: "observacion", label: "Observaciones" }
+    ];
+
+    const fieldsByKind = {
+      "Pólizas": ["Pólizas aprobadas", "Pólizas observadas", "Pólizas revisadas"],
+      "Levantadas": ["Observaciones levantadas"],
+      "Digitalización": ["Pólizas digitalizadas"],
+      "Correos": ["Correos enviados", "Correos respondidos", "Correos pendientes", "Correos de regularización"],
+      "Otros": ["Atención presencial", "Coordinación interna", "Actualización de base", "Otro"]
+    };
+
+    let records = [];
+    let currentKind = "Pólizas";
+
+    const $ = id => document.getElementById(id);
+
+    function todayISO() {
+      const d = new Date();
+      const offset = d.getTimezoneOffset();
+      return new Date(d.getTime() - offset * 60000).toISOString().slice(0,10);
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "Acumulado";
+      const parts = iso.split("-");
+      if (parts.length !== 3) return iso;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    function normalize(v) {
+      return String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    }
+
+    function normalizeRecord(r) {
+      const campo = r.campo || r.campoReporte || r.categoria || "";
+      const tipo = r.tipo || "Otros";
+      return {
+        id: r.id || crypto.randomUUID?.() || String(Date.now()+Math.random()),
+        fecha: r.fechaModo === "acumulado" ? "" : (r.fecha || ""),
+        tipo,
+        campo,
+        categoria: campo,
+        cantidad: Number(r.cantidad || 0),
+        plan: r.plan || r.canal || "",
+        canal: r.plan || r.canal || "",
+        grupo: r.grupo || "",
+        responsable: r.responsable || "",
+        observacion: r.observacion || "",
+        fechaModo: r.fechaModo || (tipo === "Levantadas" ? "acumulado" : "diario"),
+        origen: r.origen || "",
+        createdAt: r.createdAt || new Date().toISOString()
+      };
+    }
+
+    function loadRecords() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        records = saved ? JSON.parse(saved).map(normalizeRecord) : INITIAL_RECORDS.map(normalizeRecord);
+      } catch {
+        records = INITIAL_RECORDS.map(normalizeRecord);
+      }
+      saveRecords();
+    }
+
+    function saveRecords() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function pillClass(tipo) {
+      if (tipo === "Pólizas") return "p-pol";
+      if (tipo === "Correos") return "p-cor";
+      if (tipo === "Levantadas") return "p-lev";
+      if (tipo === "Digitalización") return "p-dig";
+      return "p-otr";
+    }
+
+    function sum(filterFn) {
+      return records.filter(filterFn).reduce((s,r)=>s+Number(r.cantidad||0),0);
+    }
+
+    function renderDashboard() {
+      $("mPolizas").textContent = sum(r => r.tipo === "Pólizas");
+      $("mLev").textContent = sum(r => r.tipo === "Levantadas");
+      $("mDig").textContent = sum(r => r.tipo === "Digitalización" || normalize(r.campo).includes("digital"));
+      $("mCor").textContent = sum(r => r.tipo === "Correos");
+      $("mDias").textContent = new Set(records.filter(r=>r.fecha).map(r=>r.fecha)).size;
+
+      const byType = {};
+      records.forEach(r => byType[r.tipo] = (byType[r.tipo] || 0) + Number(r.cantidad || 0));
+      $("quickSummary").innerHTML = Object.keys(byType).length ? Object.entries(byType).map(([k,v]) => `
+        <p><span class="pill ${pillClass(k)}">${escapeHtml(k)}</span> <b>${v}</b></p>
+      `).join("") : `<div class="empty">Todavía no hay registros.</div>`;
+
+      const latest = [...records].sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,10);
+      $("latestRows").innerHTML = latest.length ? latest.map(r => `
+        <tr>
+          <td>${formatDate(r.fecha)}</td>
+          <td><span class="pill ${pillClass(r.tipo)}">${escapeHtml(r.tipo)}</span></td>
+          <td>${escapeHtml(r.campo)}</td>
+          <td><b>${r.cantidad}</b></td>
+          <td>${escapeHtml(r.plan || r.grupo || r.observacion || "-")}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="5" class="empty">Todavía no hay registros.</td></tr>`;
+    }
+
+    function setKind(kind) {
+      currentKind = kind;
+      document.querySelectorAll(".activity-card").forEach(c => c.classList.toggle("active", c.dataset.kind === kind));
+      $("campo").innerHTML = fieldsByKind[kind].map(f => `<option value="${f}">${f}</option>`).join("");
+
+      const isAccum = kind === "Levantadas";
+      $("fecha").disabled = isAccum;
+      $("dateBox").style.opacity = isAccum ? .48 : 1;
+      $("dateHint").textContent = isAccum ? "No se usará para el total: las levantadas se manejan como acumulado." : "La fecha sirve para reportes diarios y mensuales.";
+      $("formTitle").textContent =
+        kind === "Pólizas" ? "Registrar pólizas" :
+        kind === "Levantadas" ? "Registrar pólizas levantadas" :
+        kind === "Digitalización" ? "Registrar digitalizados" :
+        kind === "Correos" ? "Registrar correos" : "Registrar actividad";
+      $("formHelp").textContent =
+        kind === "Levantadas" ? "Ingresa solo la cantidad levantada. Se sumará a la bolsa acumulada, aunque quede guardada una marca interna." :
+        kind === "Correos" ? "Registra los correos sin relacionarlos automáticamente con pólizas." :
+        kind === "Digitalización" ? "Registra documentos o pólizas digitalizadas como bloque independiente." :
+        "Registra cantidades del día por grupo y plan.";
+      $("modeNotice").textContent =
+        kind === "Levantadas" ? "Levantadas funciona como acumulado: importa cuántas se levantaron, no la fecha del hecho." :
+        kind === "Correos" ? "Correo enviado es actividad independiente. No se calcula desde pólizas." :
+        "En este modo, la fecha sí sirve para productividad diaria.";
+      $("sideHelp").textContent = isAccum ? "Aquí verás el acumulado de levantadas." : "Aquí verás el resumen de la fecha elegida.";
+      renderSideSummary();
+    }
+
+    function renderSideSummary() {
+      if (currentKind === "Levantadas") {
+        const total = sum(r => r.tipo === "Levantadas");
+        $("sideSummary").innerHTML = `<p><span class="pill p-lev">Observaciones levantadas</span></p><h1 style="font-size:3rem;margin:8px 0;">${total}</h1><p class="sub">Total acumulado registrado.</p>`;
+        return;
+      }
+      const fecha = $("fecha").value;
+      const list = records.filter(r => r.fecha === fecha && r.tipo === currentKind);
+      if (!list.length) {
+        $("sideSummary").innerHTML = `<div class="empty">No hay registros de ${escapeHtml(currentKind)} para el ${formatDate(fecha)}.</div>`;
+        return;
+      }
+      const map = {};
+      list.forEach(r => map[r.campo] = (map[r.campo] || 0) + Number(r.cantidad || 0));
+      $("sideSummary").innerHTML = Object.entries(map).map(([k,v]) => `<p>${escapeHtml(k)}: <b>${v}</b></p>`).join("");
+    }
+
+    function filteredHistory() {
+      const txt = normalize($("filterText").value);
+      const type = $("filterType").value;
+      const from = $("filterFrom").value;
+      const to = $("filterTo").value;
+      return records.filter(r => {
+        const blob = normalize(`${r.fecha} ${r.tipo} ${r.campo} ${r.plan} ${r.grupo} ${r.responsable} ${r.observacion}`);
+        return (!txt || blob.includes(txt)) &&
+          (!type || r.tipo === type) &&
+          (!from || !r.fecha || r.fecha >= from) &&
+          (!to || !r.fecha || r.fecha <= to);
+      }).sort((a,b)=>(b.fecha||"9999").localeCompare(a.fecha||"9999") || (b.createdAt||"").localeCompare(a.createdAt||""));
+    }
+
+    function renderHistory() {
+      const list = filteredHistory();
+      $("historyRows").innerHTML = list.length ? list.map(r => `
+        <tr>
+          <td>${formatDate(r.fecha)}</td>
+          <td><span class="pill ${pillClass(r.tipo)}">${escapeHtml(r.tipo)}</span></td>
+          <td>${escapeHtml(r.campo)}</td>
+          <td><b>${r.cantidad}</b></td>
+          <td>${escapeHtml(r.plan || "-")}</td>
+          <td>${escapeHtml(r.grupo || "-")}</td>
+          <td>${escapeHtml(r.responsable || "-")}</td>
+          <td>${escapeHtml(r.observacion || "-")}</td>
+          <td class="no-print"><button class="btn-red" onclick="deleteRecord('${r.id}')">Eliminar</button></td>
+        </tr>
+      `).join("") : `<tr><td colspan="9" class="empty">Sin registros con esos filtros.</td></tr>`;
+    }
+
+    function initChecks() {
+      $("fieldChecks").innerHTML = REPORT_FIELDS.map(f => `
+        <label class="check-item"><input type="checkbox" class="field-check" value="${escapeHtml(f)}" checked> ${escapeHtml(f)}</label>
+      `).join("");
+      $("columnChecks").innerHTML = COLUMNS.map(c => `
+        <label class="check-item"><input type="checkbox" class="col-check" value="${c.key}" checked> ${c.label}</label>
+      `).join("");
+      document.querySelectorAll(".field-check,.col-check").forEach(ch => ch.addEventListener("change", renderReport));
+    }
+
+    function selectedFields() {
+      return Array.from(document.querySelectorAll(".field-check:checked")).map(x=>x.value);
+    }
+
+    function selectedColumns() {
+      return Array.from(document.querySelectorAll(".col-check:checked")).map(x=>x.value);
+    }
+
+    function reportBaseRecords() {
+      const from = $("reportFrom").value;
+      const to = $("reportTo").value;
+      const fields = selectedFields();
+      const order = $("reportOrder").value;
+      let list = records.filter(r => {
+        const dateOk = r.tipo === "Levantadas" || (!from || r.fecha >= from) && (!to || r.fecha <= to);
+        return fields.includes(r.campo) && dateOk;
+      });
+      list.sort((a,b) => {
+        if (order === "cantidad") return Number(b.cantidad||0) - Number(a.cantidad||0);
+        if (order === "tipo") return a.tipo.localeCompare(b.tipo) || a.campo.localeCompare(b.campo);
+        if (order === "campo") return a.campo.localeCompare(b.campo);
+        return (a.fecha||"9999").localeCompare(b.fecha||"9999");
+      });
+      return list;
+    }
+
+
+    const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    const DIAS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+    function monthKeyFromDate(iso) {
+      if (!iso) return todayISO().slice(0,7);
+      return iso.slice(0,7);
+    }
+
+    function selectedMonthKeys() {
+      const from = $("reportFrom").value;
+      const to = $("reportTo").value;
+      const base = from || to || todayISO();
+      const start = new Date((from || base.slice(0,7) + "-01") + "T00:00:00");
+      const endIso = to || from || base;
+      const end = new Date(endIso + "T00:00:00");
+      const keys = [];
+      let d = new Date(start.getFullYear(), start.getMonth(), 1);
+      const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (d <= endMonth) {
+        keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+        d = new Date(d.getFullYear(), d.getMonth()+1, 1);
+      }
+      return keys.length ? keys : [todayISO().slice(0,7)];
+    }
+
+    function planillaFieldState(campo) {
+      const c = normalize(campo);
+      if (c.includes("aprob")) return "APROBADOS";
+      if (c.includes("observad") && !c.includes("levant")) return "OBSERVADOS";
+      if (c.includes("levant")) return "LEVANTADOS ✓";
+      if (c.includes("digital")) return "DIGITALIZADOS";
+      if (c.includes("enviado")) return "ENVIADOS";
+      if (c.includes("respond")) return "RESPONDIDOS";
+      if (c.includes("pend")) return "PENDIENTES";
+      if (c.includes("regular")) return "REGULARIZACIÓN";
+      if (c.includes("atencion")) return "ATENCIÓN";
+      if (c.includes("coordin")) return "COORDINACIÓN";
+      if (c.includes("actualiz")) return "ACTUALIZACIÓN";
+      return campo.toUpperCase();
+    }
+
+    function normGroup(g) {
+      const x = normalize(g);
+      if (x.includes("segundo")) return "SEGUNDO GRUPO";
+      if (x.includes("primer")) return "PRIMER GRUPO";
+      return "GENERAL";
+    }
+
+    function normPlan(p, tipo) {
+      const x = normalize(p);
+      if (x.includes("onconaval")) return "ONCONAVAL";
+      if (x.includes("basico")) return "PLAN BÁSICO";
+      if (x.includes("whatsapp")) return "WHATSAPP";
+      if (x.includes("presencial")) return "PRESENCIAL";
+      if (x.includes("sistema")) return "SISTEMA INTERNO";
+      if (x.includes("correo")) return "CORREO INSTITUCIONAL";
+      if (tipo === "Correos") return "CORREOS";
+      return "GENERAL";
+    }
+
+    function getPlanillaColumnsFor(recordsList) {
+      const selected = selectedFields();
+      const cols = [];
+      const push = (group, plan, field) => {
+        if (!cols.some(c => c.group === group && c.plan === plan && c.field === field)) {
+          cols.push({ group, plan, field, key: `${group}|${plan}|${field}` });
+        }
+      };
+
+      const basePolicyFields = ["Pólizas aprobadas","Pólizas observadas","Observaciones levantadas","Pólizas digitalizadas"];
+      const selectedPolicy = basePolicyFields.filter(f => selected.includes(f));
+      ["PRIMER GRUPO","SEGUNDO GRUPO"].forEach(group => {
+        ["PLAN BÁSICO","ONCONAVAL"].forEach(plan => {
+          selectedPolicy.forEach(field => push(group, plan, planillaFieldState(field)));
+        });
+      });
+
+      if (selected.some(f => normalize(f).includes("correo"))) {
+        ["Correos enviados","Correos respondidos","Correos pendientes","Correos de regularización"]
+          .filter(f => selected.includes(f))
+          .forEach(f => push("COMUNICACIONES", "CORREOS", planillaFieldState(f)));
+      }
+
+      ["Atención presencial","Coordinación interna","Actualización de base","Otro"]
+        .filter(f => selected.includes(f))
+        .forEach(f => push("OTROS", "GESTIÓN", planillaFieldState(f)));
+
+      // Asegura que cualquier campo nuevo que exista en los datos también aparezca si fue seleccionado.
+      recordsList.forEach(r => {
+        if (!selected.includes(r.campo)) return;
+        const group = r.tipo === "Correos" ? "COMUNICACIONES" : normGroup(r.grupo);
+        const plan = r.tipo === "Correos" ? "CORREOS" : normPlan(r.plan, r.tipo);
+        push(group, plan, planillaFieldState(r.campo));
+      });
+
+      return cols;
+    }
+
+    function daysInMonth(year, monthIndexZero) {
+      return new Date(year, monthIndexZero + 1, 0).getDate();
+    }
+
+    function buildPlanilla(monthKey) {
+      const selected = selectedFields();
+      const [year, month] = monthKey.split("-").map(Number);
+      const first = `${monthKey}-01`;
+      const last = `${monthKey}-${String(daysInMonth(year, month-1)).padStart(2,"0")}`;
+
+      const baseRecords = records.filter(r => {
+        if (!selected.includes(r.campo)) return false;
+        // Levantadas se consideran acumulado: entran sin depender de fecha, pero se muestran en fila acumulada.
+        if (r.tipo === "Levantadas") return true;
+        return r.fecha && r.fecha >= first && r.fecha <= last;
+      });
+
+      const cols = getPlanillaColumnsFor(baseRecords);
+      const rows = [];
+      const notesByDate = {};
+
+      for (let day = 1; day <= daysInMonth(year, month-1); day++) {
+        const iso = `${monthKey}-${String(day).padStart(2,"0")}`;
+        const d = new Date(iso + "T00:00:00");
+        const row = { nro: day, fecha: iso, dia: DIAS_ES[d.getDay()], total: 0, detalle: "" };
+        cols.forEach(c => row[c.key] = 0);
+
+        baseRecords.forEach(r => {
+          if (r.tipo === "Levantadas") return;
+          if (r.fecha !== iso) return;
+          const group = r.tipo === "Correos" ? "COMUNICACIONES" : normGroup(r.grupo);
+          const plan = r.tipo === "Correos" ? "CORREOS" : normPlan(r.plan, r.tipo);
+          const field = planillaFieldState(r.campo);
+          const key = `${group}|${plan}|${field}`;
+          if (key in row) {
+            row[key] += Number(r.cantidad || 0);
+            row.total += Number(r.cantidad || 0);
+          }
+          if (r.observacion) notesByDate[iso] = [...new Set([...(notesByDate[iso] || []), r.observacion])];
+        });
+
+        row.detalle = (notesByDate[iso] || []).join(" / ");
+        rows.push(row);
+      }
+
+      const accumulated = { nro: "", fecha: "ACUMULADO", dia: "", total: 0, detalle: "Pólizas levantadas registradas como acumulado general." };
+      cols.forEach(c => accumulated[c.key] = 0);
+      baseRecords.filter(r => r.tipo === "Levantadas").forEach(r => {
+        const group = normGroup(r.grupo);
+        const plan = normPlan(r.plan, r.tipo);
+        const field = planillaFieldState(r.campo);
+        const key = `${group}|${plan}|${field}`;
+        if (key in accumulated) {
+          accumulated[key] += Number(r.cantidad || 0);
+          accumulated.total += Number(r.cantidad || 0);
+        }
+      });
+      if (accumulated.total > 0) rows.push(accumulated);
+
+      const totalRow = { nro: "", fecha: "TOTAL", dia: "", total: 0, detalle: "" };
+      cols.forEach(c => totalRow[c.key] = rows.reduce((s,r) => s + Number(r[c.key] || 0), 0));
+      totalRow.total = rows.reduce((s,r) => s + Number(r.total || 0), 0);
+      rows.push(totalRow);
+
+      return { monthKey, monthName: MESES_ES[month-1], year, cols, rows };
+    }
+
+    function planillaToAoA(planilla) {
+      const width = 3 + planilla.cols.length + 2;
+      const empty = () => Array(width).fill("");
+      const aoa = [];
+      aoa.push(["FOSMAR  ·  REGISTRO DE GESTIÓN DE PÓLIZAS DE SEGURO", ...Array(width-1).fill("")]);
+      aoa.push(empty());
+      aoa.push(["Departamento de Pólizas de Seguro  ·  IAFAS FOSMAR", ...Array(width-1).fill("")]);
+      aoa.push(empty());
+      aoa.push(["MES ▸", "", planilla.monthName, "", "AÑO ▸", "", planilla.year, ...Array(Math.max(0,width-7)).fill("")]);
+      aoa.push(["RESPONSABLE ▸", "", "Sebastián Fernando Mesones Ugolini", ...Array(width-3).fill("")]);
+      aoa.push(empty());
+
+      const row8 = ["", "", ""];
+      const row9 = ["", "", ""];
+      const row10 = ["#", "FECHA", "DÍA"];
+      planilla.cols.forEach(c => {
+        row8.push(c.group);
+        row9.push(c.plan);
+        row10.push(c.field);
+      });
+      row8.push("TOTAL", "DETALLE");
+      row9.push("", "");
+      row10.push("TOTAL DÍA", "DETALLE / OBSERVACIONES");
+      aoa.push(row8);
+      aoa.push(row9);
+      aoa.push(row10);
+
+      planilla.rows.forEach(r => {
+        const row = [r.nro, r.fecha === "ACUMULADO" || r.fecha === "TOTAL" ? r.fecha : formatDate(r.fecha), r.dia];
+        planilla.cols.forEach(c => row.push(r[c.key] || ""));
+        row.push(r.total || "", r.detalle || "");
+        aoa.push(row);
+      });
+
+      return aoa;
+    }
+
+    function exportPlanillaExcel() {
+      const wb = XLSX.utils.book_new();
+      selectedMonthKeys().forEach(monthKey => {
+        const planilla = buildPlanilla(monthKey);
+        const aoa = planillaToAoA(planilla);
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const width = 3 + planilla.cols.length + 2;
+        ws["!cols"] = [
+          { wch: 5 }, { wch: 13 }, { wch: 8 },
+          ...planilla.cols.map(() => ({ wch: 14 })),
+          { wch: 11 }, { wch: 42 }
+        ];
+        ws["!merges"] = [
+          { s: { r:0,c:0 }, e: { r:0,c:width-1 } },
+          { s: { r:2,c:0 }, e: { r:2,c:width-1 } },
+          { s: { r:5,c:2 }, e: { r:5,c:Math.min(width-1,8) } }
+        ];
+
+        // Merges por grupo y plan, equivalente al formato visual del Excel.
+        let col = 3;
+        while (col < 3 + planilla.cols.length) {
+          const group = planilla.cols[col-3].group;
+          let end = col;
+          while (end + 1 < 3 + planilla.cols.length && planilla.cols[end+1-3].group === group) end++;
+          if (end > col) ws["!merges"].push({ s:{r:7,c:col}, e:{r:7,c:end} });
+          col = end + 1;
+        }
+        col = 3;
+        while (col < 3 + planilla.cols.length) {
+          const group = planilla.cols[col-3].group;
+          const plan = planilla.cols[col-3].plan;
+          let end = col;
+          while (end + 1 < 3 + planilla.cols.length && planilla.cols[end+1-3].group === group && planilla.cols[end+1-3].plan === plan) end++;
+          if (end > col) ws["!merges"].push({ s:{r:8,c:col}, e:{r:8,c:end} });
+          col = end + 1;
+        }
+
+        XLSX.utils.book_append_sheet(wb, ws, planilla.monthName.slice(0,31));
+      });
+      XLSX.writeFile(wb, `reporte_fosmar_formato_excel_${todayISO()}.xlsx`);
+    }
+
+    function exportPlanillaPdf() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      selectedMonthKeys().forEach((monthKey, idx) => {
+        if (idx > 0) doc.addPage("a4", "landscape");
+        const planilla = buildPlanilla(monthKey);
+        const widthCols = 3 + planilla.cols.length + 2;
+
+        doc.setFontSize(13);
+        doc.text("FOSMAR  ·  REGISTRO DE GESTIÓN DE PÓLIZAS DE SEGURO", 40, 32);
+        doc.setFontSize(9);
+        doc.text("Departamento de Pólizas de Seguro  ·  IAFAS FOSMAR", 40, 48);
+        doc.text(`MES: ${planilla.monthName}    AÑO: ${planilla.year}`, 40, 64);
+        doc.text("RESPONSABLE: Sebastián Fernando Mesones Ugolini", 40, 80);
+
+        const head1 = [
+          { content: "#", rowSpan: 3 },
+          { content: "FECHA", rowSpan: 3 },
+          { content: "DÍA", rowSpan: 3 }
+        ];
+        let i = 0;
+        while (i < planilla.cols.length) {
+          const group = planilla.cols[i].group;
+          let span = 1;
+          while (i + span < planilla.cols.length && planilla.cols[i+span].group === group) span++;
+          head1.push({ content: group, colSpan: span, styles: { halign: "center" } });
+          i += span;
+        }
+        head1.push({ content: "TOTAL", rowSpan: 3 });
+        head1.push({ content: "DETALLE", rowSpan: 3 });
+
+        const head2 = [];
+        i = 0;
+        while (i < planilla.cols.length) {
+          const group = planilla.cols[i].group;
+          const plan = planilla.cols[i].plan;
+          let span = 1;
+          while (i + span < planilla.cols.length && planilla.cols[i+span].group === group && planilla.cols[i+span].plan === plan) span++;
+          head2.push({ content: plan, colSpan: span, styles: { halign: "center" } });
+          i += span;
+        }
+
+        const head3 = planilla.cols.map(c => c.field);
+
+        const body = planilla.rows.map(r => [
+          r.nro,
+          r.fecha === "ACUMULADO" || r.fecha === "TOTAL" ? r.fecha : formatDate(r.fecha),
+          r.dia,
+          ...planilla.cols.map(c => r[c.key] || ""),
+          r.total || "",
+          r.detalle || ""
+        ]);
+
+        doc.autoTable({
+          startY: 96,
+          head: [head1, head2, head3],
+          body,
+          theme: "grid",
+          styles: {
+            fontSize: widthCols > 18 ? 6.2 : 7.2,
+            cellPadding: 3.2,
+            overflow: "linebreak",
+            valign: "middle",
+            halign: "center",
+            lineColor: [120, 130, 145],
+            lineWidth: .35
+          },
+          headStyles: {
+            fillColor: [13, 35, 66],
+            textColor: 255,
+            fontStyle: "bold"
+          },
+          bodyStyles: { fillColor: [255,255,255] },
+          alternateRowStyles: { fillColor: [248,250,252] },
+          columnStyles: {
+            1: { cellWidth: 48 },
+            2: { cellWidth: 27 },
+            [widthCols-1]: { cellWidth: 130, halign: "left" }
+          },
+          margin: { left: 24, right: 24 }
+        });
+      });
+      doc.save(`reporte_fosmar_formato_excel_${todayISO()}.pdf`);
+    }
+
+    function renderPlanillaPreview() {
+      const planilla = buildPlanilla(selectedMonthKeys()[0]);
+      const rows = planilla.rows;
+      const columns = [
+        { key:"nro", label:"#"}, { key:"fecha", label:"FECHA"}, { key:"dia", label:"DÍA"},
+        ...planilla.cols.map(c => ({ key:c.key, label:`${c.group} / ${c.plan} / ${c.field}` })),
+        { key:"total", label:"TOTAL DÍA"}, { key:"detalle", label:"DETALLE / OBS."}
+      ];
+      $("reportCounter").textContent = `Vista tipo Excel: ${planilla.monthName} ${planilla.year}. ${rows.length} fila(s), ${columns.length} columna(s).`;
+      $("reportHead").innerHTML = `<tr>${columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr>`;
+      $("reportRows").innerHTML = rows.map(r => `<tr>${columns.map(c => {
+        let v = c.key === "fecha" ? (r.fecha === "ACUMULADO" || r.fecha === "TOTAL" ? r.fecha : formatDate(r.fecha)) : (r[c.key] || "");
+        return `<td>${escapeHtml(v)}</td>`;
+      }).join("")}</tr>`).join("");
+    }
+
+    function reportData() {
+      const mode = $("reportMode").value;
+      const base = reportBaseRecords();
+      if (mode === "detalle") return base;
+      const map = new Map();
+      base.forEach(r => {
+        const periodo = mode === "diario" ? (r.fecha || "Acumulado") : mode === "mensual" ? (r.fecha ? r.fecha.slice(0,7) : "Acumulado") : "Acumulado";
+        const key = `${periodo}|${r.tipo}|${r.campo}|${r.plan||""}|${r.grupo||""}`;
+        if (!map.has(key)) map.set(key, { fecha: periodo, tipo: r.tipo, campo: r.campo, cantidad: 0, plan: r.plan || "", grupo: r.grupo || "", responsable: "", observacion: "" });
+        map.get(key).cantidad += Number(r.cantidad || 0);
+      });
+      return Array.from(map.values());
+    }
+
+    function renderReport() {
+      if ($("reportMode").value === "planilla") {
+        renderPlanillaPreview();
+        return;
+      }
+      const cols = selectedColumns();
+      const data = reportData();
+      const colLabels = Object.fromEntries(COLUMNS.map(c => [c.key, c.label]));
+      $("reportCounter").textContent = `${data.length} fila(s) en vista previa.`;
+      $("reportHead").innerHTML = `<tr>${cols.map(c => `<th>${colLabels[c]}</th>`).join("")}</tr>`;
+      $("reportRows").innerHTML = data.length ? data.map(r => `<tr>${cols.map(c => `<td>${cellValue(r,c)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${Math.max(cols.length,1)}" class="empty">Sin datos para el reporte elegido.</td></tr>`;
+    }
+
+    function cellValue(r,c) {
+      if (c === "fecha") return formatDate(r.fecha);
+      if (c === "cantidad") return `<b>${Number(r.cantidad||0)}</b>`;
+      return escapeHtml(r[c] || "-");
+    }
+
+    function plainCellValue(r,c) {
+      if (c === "fecha") return formatDate(r.fecha);
+      return String(r[c] ?? "");
+    }
+
+    function exportExcel(data, filename, cols = COLUMNS.map(c=>c.key)) {
+      const labels = Object.fromEntries(COLUMNS.map(c => [c.key, c.label]));
+      const rows = data.map(r => {
+        const obj = {};
+        cols.forEach(c => obj[labels[c]] = c === "cantidad" ? Number(r[c]||0) : plainCellValue(r,c));
+        return obj;
+      });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+      XLSX.writeFile(wb, filename);
+    }
+
+    function exportPdf(data, filename, cols = COLUMNS.map(c=>c.key)) {
+      const { jsPDF } = window.jspdf;
+      const labels = Object.fromEntries(COLUMNS.map(c => [c.key, c.label]));
+      const doc = new jsPDF({orientation:"landscape", unit:"pt", format:"a4"});
+      doc.setFontSize(15);
+      doc.text("Reporte FOSMAR - Control Diario Pro", 40, 36);
+      doc.setFontSize(9);
+      doc.text(`Generado: ${new Date().toLocaleString("es-PE")}`, 40, 54);
+      doc.autoTable({
+        startY: 72,
+        head: [cols.map(c => labels[c])],
+        body: data.map(r => cols.map(c => plainCellValue(r,c))),
+        theme: "grid",
+        styles: { fontSize: 8, cellPadding: 5, overflow: "linebreak", valign: "top" },
+        headStyles: { fillColor: [13,35,66], textColor: 255, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248,250,252] },
+        margin: { left: 40, right: 40 }
+      });
+      doc.save(filename);
+    }
+
+    function deleteRecord(id) {
+      if (!confirm("¿Eliminar este registro?")) return;
+      records = records.filter(r => r.id !== id);
+      saveRecords();
+      renderAll();
+    }
+
+    function applyPreset(preset) {
+      const set = values => document.querySelectorAll(".field-check").forEach(ch => ch.checked = values.includes(ch.value));
+      if (preset === "todo") set(REPORT_FIELDS);
+      if (preset === "polizas") set(fieldsByKind["Pólizas"]);
+      if (preset === "correos") set(fieldsByKind["Correos"]);
+      if (preset === "digitalizados") set(fieldsByKind["Digitalización"]);
+      if (preset === "levantadas") set(fieldsByKind["Levantadas"]);
+      if (preset === "limpio") set([]);
+      renderReport();
+    }
+
+    function renderAll() {
+      renderDashboard();
+      renderSideSummary();
+      renderHistory();
+      renderReport();
+    }
+
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+        document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+        btn.classList.add("active");
+        $(btn.dataset.tab).classList.add("active");
+        renderAll();
+      });
+    });
+
+    document.querySelectorAll(".activity-card").forEach(card => card.addEventListener("click", () => setKind(card.dataset.kind)));
+
+    $("entryForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const isAccum = currentKind === "Levantadas";
+      const record = {
+        id: crypto.randomUUID?.() || String(Date.now()+Math.random()),
+        fecha: isAccum ? "" : $("fecha").value,
+        tipo: currentKind,
+        campo: $("campo").value,
+        categoria: $("campo").value,
+        cantidad: Number($("cantidad").value || 0),
+        plan: $("plan").value,
+        canal: $("plan").value,
+        grupo: $("grupo").value,
+        responsable: $("responsable").value.trim(),
+        observacion: $("observacion").value.trim(),
+        fechaModo: isAccum ? "acumulado" : "diario",
+        origen: "Registro manual",
+        createdAt: new Date().toISOString()
+      };
+      if (!isAccum && !record.fecha) return alert("Selecciona una fecha.");
+      if (record.cantidad <= 0) return alert("Ingresa una cantidad mayor a cero.");
+      records.push(record);
+      saveRecords();
+      $("cantidad").value = "";
+      $("observacion").value = "";
+      renderAll();
+      alert("Registro guardado correctamente.");
+    });
+
+    $("clearForm").addEventListener("click", () => {
+      $("cantidad").value = "";
+      $("observacion").value = "";
+      $("grupo").value = "";
+      $("plan").value = "";
+    });
+
+    ["fecha","filterText","filterType","filterFrom","filterTo","reportFrom","reportTo","reportMode","reportOrder"].forEach(id => {
+      $(id).addEventListener("input", renderAll);
+      $(id).addEventListener("change", renderAll);
+    });
+
+    $("clearFilters").addEventListener("click", () => {
+      $("filterText").value = "";
+      $("filterType").value = "";
+      $("filterFrom").value = "";
+      $("filterTo").value = "";
+      renderHistory();
+    });
+
+    $("exportHistoryExcel").addEventListener("click", () => exportExcel(filteredHistory(), `historial_fosmar_${todayISO()}.xlsx`));
+    $("exportHistoryPdf").addEventListener("click", () => exportPdf(filteredHistory(), `historial_fosmar_${todayISO()}.pdf`));
+    $("exportReportExcel").addEventListener("click", () => {
+      if ($("reportMode").value === "planilla") return exportPlanillaExcel();
+      exportExcel(reportData(), `reporte_fosmar_${todayISO()}.xlsx`, selectedColumns());
+    });
+    $("exportReportPdf").addEventListener("click", () => {
+      if ($("reportMode").value === "planilla") return exportPlanillaPdf();
+      exportPdf(reportData(), `reporte_fosmar_${todayISO()}.pdf`, selectedColumns());
+    });
+
+    document.querySelectorAll(".preset").forEach(btn => btn.addEventListener("click", e => {
+      e.preventDefault();
+      applyPreset(btn.dataset.preset);
+    }));
+
+    $("exportJson").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(records, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `respaldo_fosmar_${todayISO()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    $("importJson").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const imported = JSON.parse(ev.target.result);
+          if (!Array.isArray(imported)) throw new Error();
+          records = imported.map(normalizeRecord);
+          saveRecords();
+          renderAll();
+          alert("Respaldo importado correctamente.");
+        } catch {
+          alert("El archivo no parece ser un respaldo válido.");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    });
+
+    $("restoreInitial").addEventListener("click", () => {
+      if (!confirm("¿Restaurar la carga inicial del Excel? Se reemplazarán los datos actuales.")) return;
+      records = INITIAL_RECORDS.map(normalizeRecord);
+      saveRecords();
+      renderAll();
+    });
+
+    $("wipeData").addEventListener("click", () => {
+      if (!confirm("¿Borrar todos los registros?")) return;
+      records = [];
+      saveRecords();
+      renderAll();
+    });
+
+    $("fecha").value = todayISO();
+    loadRecords();
+    initChecks();
+    setKind("Pólizas");
+    renderAll();
+  </script>
+</body>
+</html>
