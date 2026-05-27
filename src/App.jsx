@@ -242,7 +242,7 @@ export default function App() {
           className={`tab ${activeTab === "respaldo" ? "active" : ""}`}
           onClick={() => setActiveTab("respaldo")}
         >
-          Respaldo
+          Configuración
         </button>
       </nav>
 

@@ -1,13 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { todayISO, exportDatabaseCSV, parseCSVFile } from '../utils/excelPdfUtils';
 
 export default function Respaldo({ onImportBackup, onRestoreInitial, onWipeData, records }) {
+  const [guideExpanded, setGuideExpanded] = useState(false);
 
   const handleExportJson = () => {
     try {
       const dataStr = JSON.stringify(records, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-      const exportFileDefaultName = `respaldo_fosmar_${todayISO()}.json`;
+      const exportFileDefaultName = `respaldo_grf_${todayISO()}.json`;
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
@@ -19,7 +20,7 @@ export default function Respaldo({ onImportBackup, onRestoreInitial, onWipeData,
 
   const handleExportCSV = () => {
     try {
-      exportDatabaseCSV(records, `respaldo_fosmar_${todayISO()}.csv`);
+      exportDatabaseCSV(records, `respaldo_grf_${todayISO()}.csv`);
     } catch (e) {
       alert("Error al exportar los datos a CSV: " + e.message);
     }
@@ -86,84 +87,199 @@ export default function Respaldo({ onImportBackup, onRestoreInitial, onWipeData,
     e.target.value = "";
   };
 
+  // Generate and download a beautifully formatted CSV sample template
+  const downloadCSVSample = () => {
+    const headers = "fecha,tipo,campo,cantidad,plan,grupo,responsable,observacion\n";
+    const rows = [
+      '2026-05-01,Pólizas,Pólizas aprobadas,12,PLAN BÁSICO,PRIMER GRUPO,Sebastián Mesones,Pólizas aprobadas sin observaciones',
+      '2026-05-02,Pólizas,Pólizas observadas,3,ONCONAVAL,SEGUNDO GRUPO,Sebastián Mesones,Peticiones observadas pendientes de firma',
+      ',Levantadas,Observaciones levantadas,45,PLAN BÁSICO,PRIMER GRUPO,Sebastián Mesones,Acumulado general de observaciones',
+      '2026-05-03,Correos,Correos enviados,8,CORREOS,COMUNICACIONES,Sebastián Mesones,Respuestas a asegurados',
+      '2026-05-04,Digitalización,Pólizas digitalizadas,25,PLAN BÁSICO,PRIMER GRUPO,Sebastián Mesones,Digitalización diaria completa'
+    ].join("\n");
+
+    const csvContent = "\uFEFF" + headers + rows; // Prepend UTF-8 BOM for perfect Excel compatibility
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plantilla_ejemplo_grf.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="section active">
       <div className="card">
-        <h2>Respaldo y Configuración de Datos</h2>
-        <p className="sub">Administra la base de datos IndexedDB de FOSMAR. Puedes realizar copias de seguridad en lote o resetear los datos del navegador.</p>
+        <h2>Configuración y Administración de Datos</h2>
+        <p className="sub">Pobla la base de datos sincronizada de GRF cargando archivos externos, descarga copias de respaldo o inicializa el historial.</p>
 
-        <div className="backup-card-grid">
-          {/* Panel 1: Copia de Seguridad */}
-          <div className="backup-panel">
-            <h3>Respaldos Locales</h3>
-            <p className="sub" style={{ fontSize: '0.8rem', marginBottom: '14px' }}>
-              Descarga o carga los registros completos para salvaguardar tu información.
-            </p>
+        <div className="backup-card-grid" style={{ gridTemplateColumns: '1.2fr 0.8fr' }}>
+          
+          {/* Left Panel: Structured CSV/JSON Uploader & Sample Guides */}
+          <div className="backup-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <h3>Importación de Datos en Lote</h3>
+              <p className="sub" style={{ fontSize: '0.8rem', marginBottom: '14px' }}>
+                Sube registros en bloque desde un archivo externo. Nuestro parser inteligente mapeará automáticamente columnas en español, inglés o mayúsculas.
+              </p>
+            </div>
 
-            <div className="backup-panel-body">
-              {/* Unified Export Buttons */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.7rem' }}>Exportar base de datos a:</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <button type="button" className="btn-primary" onClick={handleExportJson}>
-                    JSON (.json)
-                  </button>
-                  <button type="button" className="btn-primary" onClick={handleExportCSV}>
-                    CSV (.csv)
-                  </button>
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label className="btn-primary btn-file-label" style={{ margin: 0, padding: '12px' }}>
+                  Cargar Archivo CSV
+                  <input type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImportCSV} />
+                </label>
+                <label className="btn-light btn-file-label" style={{ margin: 0, padding: '12px' }}>
+                  Cargar Copia JSON
+                  <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportJson} />
+                </label>
               </div>
 
-              {/* Unified Import actions */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
-                <label style={{ fontSize: '0.7rem' }}>Importar base de datos desde:</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <label className="btn-light btn-file-label" style={{ margin: 0 }}>
-                    Cargar JSON
-                    <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportJson} />
-                  </label>
-                  <label className="btn-light btn-file-label" style={{ margin: 0 }}>
-                    Cargar CSV
-                    <input type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImportCSV} />
-                  </label>
-                </div>
+              <button 
+                type="button" 
+                className="btn-light" 
+                onClick={downloadCSVSample} 
+                style={{ width: '100%', padding: '11px', color: 'var(--primary)', borderColor: 'var(--primary-light)', background: '#f5f7ff', justifyContent: 'center' }}
+              >
+                📥 Descargar Plantilla y Guía CSV (.csv)
+              </button>
+            </div>
+
+            {/* Interactive Accordion CSV Format Guide */}
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', marginTop: '4px' }}>
+              <div 
+                onClick={() => setGuideExpanded(!guideExpanded)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  📖 Ver Guía de Estructura del CSV
+                </span>
+                <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>
+                  {guideExpanded ? "Ocultar ▲" : "Mostrar ▼"}
+                </span>
               </div>
+
+              {guideExpanded && (
+                <div style={{ marginTop: '12px', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '10px', animation: 'dropdownIn 0.2s ease-out' }}>
+                  <p style={{ margin: 0, lineHeight: 1.4 }}>
+                    El archivo CSV debe tener codificación UTF-8 y contener las siguientes columnas separadas por comas (puedes abrirlas directamente en Excel):
+                  </p>
+                  
+                  <div className="table-wrap" style={{ maxHeight: '240px' }}>
+                    <table style={{ fontSize: '0.74rem' }}>
+                      <thead>
+                        <tr style={{ background: '#f1f5f9' }}>
+                          <th style={{ padding: '6px 8px', textAlign: 'left' }}>Columna</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'left' }}>Descripción / Valores Permitidos</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'left' }}>Ejemplo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>fecha</b></td>
+                          <td style={{ padding: '6px 8px' }}>Fecha en formato <code>AAAA-MM-DD</code>. *Dejar vacío para "Levantadas".*</td>
+                          <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>2026-05-15</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>tipo</b></td>
+                          <td style={{ padding: '6px 8px' }}>Debe ser uno de: <code>Pólizas</code>, <code>Levantadas</code>, <code>Digitalización</code>, <code>Correos</code> o <code>Otros</code>.</td>
+                          <td style={{ padding: '6px 8px' }}>Pólizas</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>campo</b></td>
+                          <td style={{ padding: '6px 8px' }}>Estado exacto (Ej: <code>Pólizas aprobadas</code>, <code>Pólizas observadas</code>, <code>Correos enviados</code>, etc.).</td>
+                          <td style={{ padding: '6px 8px' }}>Pólizas aprobadas</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>cantidad</b></td>
+                          <td style={{ padding: '6px 8px' }}>Número entero de la productividad diaria.</td>
+                          <td style={{ padding: '6px 8px', fontWeight: 'bold' }}>15</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>plan</b></td>
+                          <td style={{ padding: '6px 8px' }}>Canal o plan correspondiente (Ej: <code>PLAN BÁSICO</code>, <code>ONCONAVAL</code>, <code>CORREOS</code>).</td>
+                          <td style={{ padding: '6px 8px' }}>PLAN BÁSICO</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>grupo</b></td>
+                          <td style={{ padding: '6px 8px' }}>Grupo de pertenencia: <code>PRIMER GRUPO</code> o <code>SEGUNDO GRUPO</code> (o vacío).</td>
+                          <td style={{ padding: '6px 8px' }}>PRIMER GRUPO</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>responsable</b></td>
+                          <td style={{ padding: '6px 8px' }}>Nombre completo de la persona a cargo de la tarea.</td>
+                          <td style={{ padding: '6px 8px' }}>S. Mesones</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 8px' }}><b>observacion</b></td>
+                          <td style={{ padding: '6px 8px' }}>Comentarios adicionales de control interno.</td>
+                          <td style={{ padding: '6px 8px' }}>Ninguna</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Panel 2: Mantenimiento y Inicialización */}
-          <div className="backup-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <h3>Carga Inicial y Mantenimiento</h3>
+          {/* Right Panel: Backups & Danger Area */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* Backup Exporter Panel */}
+            <div className="backup-panel">
+              <h3>Copias de Seguridad (Exportar)</h3>
               <p className="sub" style={{ fontSize: '0.8rem', marginBottom: '14px' }}>
-                Restablece los registros del sistema o inicializa el historial con los datos demo del Excel FOSMAR.
+                Respalda la base de datos local y de la nube completa en un archivo para guardarla de forma segura.
               </p>
 
-              <button className="btn-light" style={{ width: '100%', marginTop: '8px' }} onClick={() => {
-                if (confirm("¿Estás seguro de restaurar los 37 registros de prueba del Excel? Esto reemplazará tus registros actuales.")) {
-                  onRestoreInitial();
-                  alert("Registros de muestra restablecidos con éxito.");
-                }
-              }}>
-                Restaurar carga inicial demo
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button type="button" className="btn-light" onClick={handleExportJson}>
+                  JSON (.json)
+                </button>
+                <button type="button" className="btn-light" onClick={handleExportCSV}>
+                  CSV (.csv)
+                </button>
+              </div>
             </div>
 
-            {/* Danger section inside maintenance panel, outlined elegantly */}
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '16px' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '6px' }}>
-                Zona de riesgo
-              </span>
-              <button className="btn-danger" style={{ width: '100%', padding: '10px' }} onClick={() => {
-                if (confirm("Se borrarán permanentemente todos los datos guardados en el navegador. Esta acción no se puede deshacer. ¿Deseas continuar?")) {
-                  onWipeData();
-                  alert("Base de datos local vaciada.");
-                }
-              }}>
-                Vaciar base de datos completa
-              </button>
+            {/* Maintenance Panel */}
+            <div className="backup-panel" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <h3>Carga Inicial y Mantenimiento</h3>
+                <p className="sub" style={{ fontSize: '0.8rem', marginBottom: '14px' }}>
+                  Herramientas de restablecimiento y borrado permanente de datos.
+                </p>
+
+                <button className="btn-light" style={{ width: '100%', padding: '10px' }} onClick={() => {
+                  if (confirm("¿Estás seguro de restaurar los 37 registros de prueba demo? Esto reemplazará tus registros actuales y se sincronizará con la nube.")) {
+                    onRestoreInitial();
+                    alert("Registros de muestra restablecidos con éxito.");
+                  }
+                }}>
+                  Restaurar carga inicial demo
+                </button>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '6px' }}>
+                  Zona de riesgo
+                </span>
+                <button className="btn-danger" style={{ width: '100%', padding: '10px' }} onClick={() => {
+                  if (confirm("Se borrarán permanentemente todos los datos guardados en la nube y de forma local. Esta acción no se puede deshacer. ¿Deseas continuar?")) {
+                    onWipeData();
+                    alert("Base de datos completa vaciada.");
+                  }
+                }}>
+                  Vaciar base de datos completa
+                </button>
+              </div>
             </div>
+
           </div>
+
         </div>
       </div>
     </div>
