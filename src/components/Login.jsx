@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { loginWithGoogle } from '../db/firebase';
 
-export default function Login({ onAuthSuccess, onAuthDenied }) {
+export default function Login({ onAuthSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -11,12 +11,11 @@ export default function Login({ onAuthSuccess, onAuthDenied }) {
     try {
       const result = await loginWithGoogle();
       const user = result.user;
-      
       onAuthSuccess(user);
     } catch (err) {
       console.error("Auth error:", err);
       if (err.code !== "auth/popup-closed-by-user") {
-        setError("Error al iniciar sesión con Google. Inténtalo de nuevo.");
+        setError("Error de autenticación. Por favor, reintente.");
       }
       setLoading(false);
     }
@@ -29,9 +28,9 @@ export default function Login({ onAuthSuccess, onAuthDenied }) {
           <div className="login-logo-circle">
             <span>GRF</span>
           </div>
-          <h1>Generador de Reportes FOSMAR</h1>
+          <h1>GRF Portal</h1>
           <p className="login-subtitle">
-            Sistema seguro de procesamiento analítico y registro diario
+            Plataforma centralizada de registro de flujos y procesamiento analítico de productividad.
           </p>
         </div>
 
@@ -41,22 +40,7 @@ export default function Login({ onAuthSuccess, onAuthDenied }) {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <span>Acceso restringido y protegido para personal autorizado</span>
-          </div>
-
-          <div className="features-list">
-            <div className="feature-item">
-              <strong>🔒 Seguridad de Datos</strong>
-              <span>Autenticación con Google y encriptación de sesión en la nube.</span>
-            </div>
-            <div className="feature-item">
-              <strong>☁ Sincronización en la Nube</strong>
-              <span>Respaldo en tiempo real y acceso multidispositivo.</span>
-            </div>
-            <div className="feature-item">
-              <strong>📊 Planilla FOSMAR</strong>
-              <span>Generación de reportes de alta fidelidad idénticos a los oficiales.</span>
-            </div>
+            <span>Acceso controlado únicamente para personal autorizado</span>
           </div>
 
           {error && <div className="login-error">{error}</div>}
@@ -66,6 +50,7 @@ export default function Login({ onAuthSuccess, onAuthDenied }) {
             className="google-btn" 
             onClick={handleLogin}
             disabled={loading}
+            style={{ marginTop: '10px' }}
           >
             {loading ? (
               <span className="spinner"></span>
@@ -77,14 +62,14 @@ export default function Login({ onAuthSuccess, onAuthDenied }) {
                   <path fill="#FBBC05" d="M5.24 10.63C4.99 11.38 4.86 12.18 4.86 13s.13 1.62.38 2.37l-3.87 3C.5 16.71 0 14.91 0 13s.5-3.71 1.37-5.37l3.87 3z" />
                   <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.67-2.84c-1.02.68-2.33 1.09-4.29 1.09-3.16 0-5.84-2.56-6.76-5.59l-3.87 3C3.37 20.32 7.35 23 12 23z" />
                 </svg>
-                <span>Iniciar sesión con Google</span>
+                <span>Iniciar sesión</span>
               </>
             )}
           </button>
         </div>
 
         <div className="login-footer">
-          Departamento de Pólizas de Seguro · IAFAS FOSMAR
+          Portal de Control Interno · Productividad Corporativa
         </div>
       </div>
     </div>

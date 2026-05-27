@@ -186,9 +186,9 @@ export default function App() {
     <div className="app">
       <header className="app-header no-print">
         <div className="app-brand">
-          <h1>GRF <span>Generador de Reportes FOSMAR</span></h1>
+          <h1>GRF <span>Generador de Reportes de Flujos</span></h1>
           <p>
-            Sistema de registro y procesamiento analítico de pólizas de seguro, digitalizaciones, levantamientos y comunicaciones.
+            Sistema centralizado de registro y procesamiento analítico de flujos de trabajo, productividad y comunicaciones.
           </p>
         </div>
         <div className="header-meta">

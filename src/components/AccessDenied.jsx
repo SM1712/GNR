@@ -22,20 +22,20 @@ export default function AccessDenied({ user, onLogoutSuccess }) {
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
           </div>
-          <h1 className="denied-title">Acceso Denegado</h1>
+          <h1 className="denied-title">Acceso Restringido</h1>
           <p className="login-subtitle text-danger">
-            Esta cuenta de Google no tiene autorización para acceder al sistema.
+            Tu cuenta de usuario no cuenta con privilegios de acceso en este entorno.
           </p>
         </div>
 
         <div className="login-body" style={{ gap: '20px' }}>
           <div className="denied-email-box">
-            <label>Cuenta de Google activa:</label>
+            <label>Cuenta activa:</label>
             <div className="email-badge">{user?.email}</div>
           </div>
 
           <p className="denied-description">
-            El sistema de Reportes FOSMAR (GRF) está restringido únicamente a usuarios autorizados. Si eres el administrador o requieres acceso, por favor solicita que agreguen este correo a la lista blanca.
+            Esta plataforma está restringida únicamente a personal debidamente autorizado con credenciales activas. Si requieres acceso, solicita al administrador de sistemas que registre tu cuenta.
           </p>
 
           <button 
@@ -44,12 +44,12 @@ export default function AccessDenied({ user, onLogoutSuccess }) {
             onClick={handleLogout}
             style={{ width: '100%', padding: '12px', fontWeight: 'bold', border: '1px solid var(--border)' }}
           >
-            Cerrar sesión e intentar con otra cuenta
+            Cerrar sesión
           </button>
         </div>
 
         <div className="login-footer">
-          Departamento de Pólizas de Seguro · IAFAS FOSMAR
+          Portal de Control Interno · Productividad Corporativa
         </div>
       </div>
     </div>
